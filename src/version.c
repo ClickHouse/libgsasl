@@ -41,6 +41,9 @@
  *   condition is not met.  If NULL is passed to this function no
  *   check is done and only the version string is returned.
  **/
+#ifdef __APPLE__
+  int strverscmp(const char *s1, const char *s2);
+#endif
 const char *
 gsasl_check_version (const char *req_version)
 {
