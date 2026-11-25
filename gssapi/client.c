@@ -213,15 +213,29 @@ _gsasl_gssapi_client_step (Gsasl_session * sctx,
       if (GSS_ERROR (maj_stat))
 	return GSASL_GSSAPI_RELEASE_BUFFER_ERROR;
 
-#if 0
-      /* FIXME: Fix qop. */
-      if (cb_qop)
-	state->qop = cb_qop (sctx, serverqop);
+      /* [RFC 4752 section 3.1]: the client selects exactly one of the
+         security layers the server offers.  Echoing the whole offer back
+         lets the server pick a layer, typically confidentiality, that the
+         application never asked for and so does not wrap.  As in
+         DIGEST-MD5, the application requests a layer with the GSASL_QOP
+         property; without one, request authentication only. */
+      {
+	const char *requested = gsasl_property_get (sctx, GSASL_QOP);
+	int selected = GSASL_QOP_AUTH;
 
-      if ((state->qop & serverqop) == 0)
-	/*  Server does not support what user wanted. */
-	return GSASL_GSSAPI_UNSUPPORTED_PROTECTION_ERROR;
-#endif
+	if (requested && strcmp (requested, "qop-int") == 0)
+	  selected = GSASL_QOP_AUTH_INT;
+	else if (requested && strcmp (requested, "qop-conf") == 0)
+	  selected = GSASL_QOP_AUTH_CONF;
+	else if (requested && strcmp (requested, "qop-auth") != 0)
+	  return GSASL_GSSAPI_UNSUPPORTED_PROTECTION_ERROR;
+
+	if ((qop & selected) == 0)
+	  /* Server does not support what the application wanted. */
+	  return GSASL_GSSAPI_UNSUPPORTED_PROTECTION_ERROR;
+
+	qop = selected;
+      }
 
       /* FIXME: Fix maxbuf. */
 
