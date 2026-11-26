@@ -253,7 +253,13 @@ _gsasl_gssapi_client_step (Gsasl_session * sctx,
 	char *q = bufdesc.value;
 	state->qop = qop;
 	q[0] = state->qop;
-	memcpy (q + 1, clientwrap + 1, 3);
+	/* [RFC 4752 section 3.1]: the maximum size the client is able to
+	   receive MUST be 0 if the client does not support any security
+	   layer.  Peers such as Cyrus SASL reject anything else. */
+	if (state->qop == GSASL_QOP_AUTH)
+	  memset (q + 1, 0, 3);
+	else
+	  memcpy (q + 1, clientwrap + 1, 3);
 	memcpy (q + 4, p, strlen (p));
       }
 
